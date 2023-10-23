@@ -59,6 +59,13 @@ RacingControlNode::RacingControlNode(const std::string& node_name,const rclcpp::
       std::bind(&RacingControlNode::subscription_callback_target,
       this,
       std::placeholders::_1)); 
+  odom_subscriber_ =
+  this->create_subscription<nav_msgs::msg::Odometry>(
+    "odom",
+    10,
+    std::bind(&RacingControlNode::subscription_callback_odom,
+    this,
+    std::placeholders::_1)); 
   publisher_ =
     this->create_publisher<geometry_msgs::msg::Twist>(pub_control_topic_, 5);
   RCLCPP_INFO(rclcpp::get_logger("RacingControlNode"), "RacingControlNode initialized!");
@@ -100,6 +107,18 @@ void RacingControlNode::subscription_callback_target(const ai_msgs::msg::Percept
     sub_target_ = true;
     std::unique_lock<std::mutex> lock(point_target_mutex_);
     targets_queue_.push(targets_msg);
+    if (targets_queue_.size() > 1) {
+      targets_queue_.pop();
+    }
+  }
+  return;
+}
+
+void RacingControlNode::subscription_callback_odom(const nav_msgs::msg::Odometry::SharedPtr odom_msg){
+  {
+    sub_target_ = true;
+    std::unique_lock<std::mutex> lock(point_target_mutex_);
+    targets_queue_.push(odom_msg);
     if (targets_queue_.size() > 1) {
       targets_queue_.pop();
     }
